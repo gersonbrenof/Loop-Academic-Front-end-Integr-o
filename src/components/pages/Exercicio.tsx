@@ -18,20 +18,8 @@ interface ExercicioDetalhado {
   descricao: string;
   numeroDoExercicio: number;
   lista: ListaInfo;
-  // AVISO: Os campos abaixo (dica, explicacao, etc.) não vêm da API.
-  // Você precisará adicioná-los à sua API e a esta interface no futuro.
   dica?: string;
-  explicacao?: string;
-  note?: string;
-  ExImg?: string;
-  funcao?: string;
-  explixacao?: string; // Verifique o nome deste campo
-  expm?: string;
-  text?: string;
-  passos?: string;
-  int?: string;
-  operacao?: string;
-  int2?: string;
+  // ... outros campos ...
   codigo?: string;
 }
 
@@ -40,6 +28,14 @@ interface ExercicioDaLista {
   titulo: string;
   numeroDoExercicio: number;
 }
+
+// ***** NOVA INTERFACE PARA O RESULTADO DA SUBMISSÃO *****
+interface SubmissionResult {
+  mensagem: string;
+  resultado: 'Correto' | 'Incorreto' | string; // Usamos tipos literais para melhor autocompletar
+  pontuacao: number;
+}
+
 
 export function Exercicio() {
   const { exercicioId } = useParams<{ exercicioId: string }>();
@@ -52,21 +48,25 @@ export function Exercicio() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
+  // ***** NOVO ESTADO PARA ARMAZENAR O RESULTADO *****
+  const [submissionResult, setSubmissionResult] = useState<SubmissionResult | null>(null);
+  
   // Estados para navegação
   const [exerciciosDaLista, setExerciciosDaLista] = useState<ExercicioDaLista[]>([]);
   const [indiceAtual, setIndiceAtual] = useState(0);
   const [listaTitulo, setListaTitulo] = useState('Lista de Exercícios');
 
-  // Estados dos modais (mantidos do seu código original)
+  // Estados dos modais
   const [showDicas, setShowDicas] = useState(false);
   const [showCodigoApoio, setShowCodigoApoio] = useState(false);
-  const [showSimplificarProblema, setShowSimplificarProblema] = useState(false);
-  const [showSintaxe, setShowSintaxe] = useState(false);
-  const [showDescricaoDetalhada, setShowDescricaoDetalhada] = useState(false);
 
   // --- LÓGICA DE BUSCA DE DADOS (ROBUSTA) ---
   useEffect(() => {
+    // Reseta o resultado da submissão ao carregar um novo exercício
+    setSubmissionResult(null);
+
     const carregarDadosDoExercicio = async () => {
+      // ... (sua lógica de busca de dados permanece a mesma)
       if (!exercicioId) return;
       setLoading(true);
       setError(null);
@@ -120,7 +120,66 @@ export function Exercicio() {
     }
   };
   
-  const handleEnviarCodigo = async () => { /* ... sua função de envio ... */ };
+  // ***** FUNÇÃO DE ENVIO ATUALIZADA *****
+  const handleEnviarCodigo = async () => {
+    if (!code.trim()) {
+      alert('Por favor, escreva seu código antes de enviar.');
+      return;
+    }
+    
+    // Reseta o resultado anterior antes de uma nova tentativa
+    setSubmissionResult(null);
+
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        alert('Sessão expirada. Por favor, faça login novamente.');
+        navigate('/login');
+        return;
+      }
+
+      const url = `${apiUrl}/exercicio/exercicio/responder-exercicio/${exercicioId}/`;
+
+      const response = await axios.post(
+        url,
+        { codigoDoExercicio: code },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          }
+        }
+      );
+
+      const resultData: SubmissionResult = response.data;
+      
+      // Armazena o resultado no estado para ser exibido na tela
+      setSubmissionResult(resultData);
+
+      // Se a resposta for correta, navega para o próximo exercício após um pequeno delay
+      if (resultData.resultado === 'Correto') {
+        setTimeout(() => {
+          if (indiceAtual < exerciciosDaLista.length - 1) {
+            navegarParaExercicio(indiceAtual + 1);
+          } else {
+            alert('Parabéns! Você concluiu todos os exercícios da lista!');
+            navigate('/listas');
+          }
+        }, 2000); // Espera 2 segundos para o usuário ver a mensagem de sucesso
+      }
+      
+    } catch (err: any) {
+      console.error('Erro ao enviar o exercício:', err);
+      const errorMessage = err.response?.data?.detail || err.response?.data?.error || 'Ocorreu um erro ao enviar sua resposta.';
+      // Exibe o erro na própria caixa de feedback
+      setSubmissionResult({
+          resultado: 'Incorreto',
+          mensagem: errorMessage,
+          pontuacao: 0
+      });
+    }
+  };
+
   const handleCloseModal = (setter: React.Dispatch<React.SetStateAction<boolean>>) => () => setter(false);
   const lineCount = code.split('\n').length;
   
@@ -131,10 +190,9 @@ export function Exercicio() {
 
   return (
     <div>
+      {/* ... seu cabeçalho e menu lateral ... */}
       <div>
-        {/* ***** A CORREÇÃO ESTÁ AQUI ***** */}
         <div className='absolute top-[19px] left-[15px] text-[#0E7886] w-[135px] flex flex-col items-center'>
-          {/* Trocamos a tag <a> por <button> */}
           <button onClick={() => navigate(-1)} className='flex flex-col items-center cursor-pointer'>
             <FaArrowLeft className='w-10 h-10' />
             <p>Retornar</p>
@@ -142,8 +200,8 @@ export function Exercicio() {
         </div>
 
         <div className='absolute top-[115px] left-[61px]'>
-          <div className='bg-[#FFFFFF] w-[1170px] h-[550px] flex shadow-md'>
-            <div className='flex-grow p-5'>
+          <div className='bg-[#FFFFFF] w-[1170px] h-[auto] min-h-[550px] flex shadow-md'>
+            <div className='flex-grow p-5 max-w-[600px]'>
               <div className='mb-5'>
                 <h1 className='text-[#0E7886] text-2xl font-semibold mb-5'>
                   Exercício {exercicio.numeroDoExercicio} - {exercicio.titulo}
@@ -162,25 +220,45 @@ export function Exercicio() {
                 </div>
               </div>
             </div>
-            <div className='relative flex h-[550px]'>
-              <div className='bg-gray-800 text-white p-4 text-right overflow-hidden'>
-                {Array.from({ length: lineCount }, (_, i) => <div key={i}>{i + 1}</div>)}
-              </div>
-              <textarea
-                className='bg-black text-white w-[550px] p-4 font-mono resize-none overflow-y-auto'
-                value={code}
-                onChange={(e) => setCode(e.target.value)}
-                placeholder='Escreva seu código aqui...'
-              />
-              <div className='absolute bottom-0 right-0 flex bg-[#302D2D] text-white w-[560px] justify-end'>
-                <button className='bg-[#0E7886] w-[150px] px-4 py-1'>Executar</button>
-                <button className='bg-[#C8952FC7] w-[150px] px-4 py-1'>Salvar</button>
-                <button onClick={handleEnviarCodigo} className='bg-[#0E862E] w-[150px] px-4 py-1'>Enviar</button>
-              </div>
+            <div className='relative flex flex-col h-full'>
+                <div className="flex h-[550px]">
+                    <div className='bg-gray-800 text-white p-4 text-right overflow-hidden'>
+                        {Array.from({ length: lineCount }, (_, i) => <div key={i}>{i + 1}</div>)}
+                    </div>
+                    <textarea
+                        className='bg-black text-white w-[550px] p-4 font-mono resize-none overflow-y-auto'
+                        value={code}
+                        onChange={(e) => setCode(e.target.value)}
+                        placeholder='Escreva seu código aqui...'
+                    />
+                </div>
+              
+                {/* ***** AQUI ESTÁ A CAIXA DE FEEDBACK ***** */}
+                {submissionResult && (
+                    <div className={`w-[582px] p-4 text-white font-semibold ${submissionResult.resultado === 'Correto' ? 'bg-green-500' : 'bg-red-500'}`}>
+                        <div className="flex justify-between items-center">
+                            <h3 className="text-lg">Resultado: {submissionResult.resultado}</h3>
+                            {submissionResult.resultado !== 'Correto' && (
+                                <button onClick={() => setSubmissionResult(null)} className="font-bold text-xl">
+                                    <IoCloseSharp />
+                                </button>
+                            )}
+                        </div>
+                        <p className="mt-1">{submissionResult.mensagem}</p>
+                        <p>Pontuação Obtida: {submissionResult.pontuacao}</p>
+                    </div>
+                )}
+              
+                <div className='flex bg-[#302D2D] text-white w-[582px] justify-end'>
+                    <button className='bg-[#0E7886] w-[150px] px-4 py-1'>Executar</button>
+                    <button className='bg-[#C8952FC7] w-[150px] px-4 py-1'>Salvar</button>
+                    <button onClick={handleEnviarCodigo} className='bg-[#0E862E] w-[150px] px-4 py-1'>Enviar</button>
+                </div>
             </div>
           </div>
           <div className='mt-10 flex justify-center'>
-            <div className='flex text-white shadow-md'>
+            {/* ... botões de navegação anterior/próximo ... */}
+             <div className='flex text-white shadow-md'>
               <button
                 className={`w-[400px] h-[60px] flex items-center justify-center ${indiceAtual === 0 ? 'bg-gray-400' : 'bg-red-600'}`}
                 onClick={() => navegarParaExercicio(indiceAtual - 1)}
@@ -195,7 +273,8 @@ export function Exercicio() {
           </div>
         </div>
       </div>
-      <div className='ml-[1310px] bg-[#302D2DCC] w-[200px] h-[800px]'>
+      <div className='ml-[1310px] bg-[#302D2DCC] w-[200px] h-full min-h-screen'>
+        {/* ... sua lista de exercícios ... */}
         <div className='text-white p-4'>
           <p>{listaTitulo}</p>
         </div>
@@ -214,15 +293,12 @@ export function Exercicio() {
         ))}
       </div>
       
-      {/* Seus modais aqui... */}
+      {/* ... seus modais ... */}
       {showDicas && (
         <div className='fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center'>
           <div className='relative w-[1000px] h-auto bg-white shadow-lg text-black'>
             <h1 className='text-2xl font-semibold bg-[#0E7886] text-white h-[51px] flex items-center p-5'>Dicas</h1>
             <p className='p-5'>Consulte aqui as dicas especialmente preparadas para auxiliar-lhe na resolução do exercício.</p>
-            <div className='p-5 flex justify-around'>
-              {/* Botões do modal de dicas */}
-            </div>
             <div className="p-5">
               <p>O conteúdo detalhado das dicas para este exercício não está disponível no momento.</p>
               <p className="mt-2"><b>Sugestão:</b> Revise a descrição do problema e o material de apoio.</p>

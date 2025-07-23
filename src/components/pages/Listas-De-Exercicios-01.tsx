@@ -1,16 +1,17 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom'; // Usamos Link para navegação
+import { useParams, Link } from 'react-router-dom';
 import axios from 'axios';
 import { FaArrowLeft } from 'react-icons/fa';
 
 const apiUrl = import.meta.env.VITE_API_URL;
 
-// --- INTERFACES PARA OS DADOS DA API ---
+// --- INTERFACES CORRIGIDAS ---
 interface ExercicioItem {
   id: number;
   titulo: string;
   numeroDoExercicio: number;
-  status: string; // Ex: "Respondido"
+  // O campo 'status' pode ser ignorado, pois o campo 'respondido' é o correto para o status do usuário.
+  respondido: 'Respondido' | 'Não Respondido'; 
 }
 
 interface ListaDetalhes {
@@ -21,7 +22,6 @@ interface ListaDetalhes {
 
 export function ListasDeExercicios01() {
   const params = useParams<{ id: string }>();
-  // CORREÇÃO APLICADA AQUI: Se a URL não tiver um ID, usamos '1' como padrão.
   const id = params.id || '1'; 
 
   const [lista, setLista] = useState<ListaDetalhes | null>(null);
@@ -30,7 +30,6 @@ export function ListasDeExercicios01() {
 
   useEffect(() => {
     const fetchDetalhesDaLista = async () => {
-      // O 'id' nunca será nulo aqui por causa da correção acima.
       setLoading(true);
       setError(null);
       try {
@@ -47,7 +46,7 @@ export function ListasDeExercicios01() {
       }
     };
     fetchDetalhesDaLista();
-  }, [id]); // O useEffect depende do 'id' final, que agora sempre terá um valor.
+  }, [id]);
 
   const renderContent = (content: React.ReactNode) => (
     <div className='mt-[0px] absolute top-[-10px] left-[-550px] pb-20 w-full flex justify-center pt-40'>
@@ -68,7 +67,6 @@ export function ListasDeExercicios01() {
         </h1>
         
         <div className='flex pt-20'>
-          {/* Este link de voltar para o menu principal está correto */}
           <Link to='/' className='flex flex-col items-center py-1 h-full ml-9'>
             <FaArrowLeft className='w-10 h-auto' />
             <p className='w-32 text-sm text-center'>Menu Principal</p>
@@ -103,8 +101,9 @@ export function ListasDeExercicios01() {
                                   <p>{exercicio.titulo}</p>
                               </Link>
                               
-                              <p className={`w-3/12 mr-2 font-bold ${exercicio.status === 'Respondido' ? 'text-green-500' : 'text-red-500'}`}>
-                                {exercicio.status === 'Respondido' ? 'RESPONDIDO' : 'PENDENTE'}
+                              {/* ***** CORREÇÃO APLICADA AQUI ***** */}
+                              <p className={`w-3/12 mr-2 font-bold ${exercicio.respondido === 'Respondido' ? 'text-green-500' : 'text-red-500'}`}>
+                                {exercicio.respondido === 'Respondido' ? 'RESPONDIDO' : 'PENDENTE'}
                               </p>
                           </div>
                       ))}
