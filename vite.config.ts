@@ -13,6 +13,7 @@ export default defineConfig({
     outDir: 'dist',
   },
   server: {
+    host: '0.0.0.0', // <-- necessário para expor a porta na rede
     port: 5173,
   },
   // necessário para deploy de SPA com react-router
