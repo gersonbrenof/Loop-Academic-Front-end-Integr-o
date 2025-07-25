@@ -6,16 +6,16 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src'), // atalho opcional
+      '@': path.resolve(__dirname, './src'),
     },
   },
   build: {
     outDir: 'dist',
   },
   server: {
-    host: '0.0.0.0', // <-- necessário para expor a porta na rede
+    host: '0.0.0.0',
     port: 5173,
+    allowedHosts: ['loop-academic-front.onrender.com'], // 👈 Adicionado aqui
   },
-  // necessário para deploy de SPA com react-router
   base: './',
 })
