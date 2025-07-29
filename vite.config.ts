@@ -13,9 +13,13 @@ export default defineConfig({
     outDir: 'dist',
   },
   server: {
-    host: '0.0.0.0',
-    port: 5173,
-    allowedHosts: ['loop-academic-front.onrender.com'], // 👈 Adicionado aqui
+    host: '0.0.0.0',         // Permite acesso externo
+    port: 5173,              // Porta padrão Vite
+    strictPort: true,        // Se a porta estiver ocupada, falha em vez de usar outra porta
+    cors: true,              // Permite requisições CORS, útil para APIs externas e frontend separado
+    open: true,              // Abre automaticamente no navegador ao iniciar
+    // allowedHosts: ['loop-academic-front.onrender.com'], 
+    // Se você quer restringir a hosts específicos, mantenha, caso contrário, pode comentar para aceitar todos
   },
-  base: './',
+  base: './', // Base relativa para assets em produção
 })
