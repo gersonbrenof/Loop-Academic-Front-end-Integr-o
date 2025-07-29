@@ -18,7 +18,7 @@ export default defineConfig({
     strictPort: true,        // Se a porta estiver ocupada, falha em vez de usar outra porta
     cors: true,              // Permite requisições CORS, útil para APIs externas e frontend separado
     open: true,              // Abre automaticamente no navegador ao iniciar
-    // allowedHosts: ['loop-academic-front.onrender.com'], 
+    allowedHosts: 'all'
     // Se você quer restringir a hosts específicos, mantenha, caso contrário, pode comentar para aceitar todos
   },
   base: './', // Base relativa para assets em produção
