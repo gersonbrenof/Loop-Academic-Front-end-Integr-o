@@ -4,17 +4,17 @@ import axios from 'axios';
 
 const apiUrl = import.meta.env.VITE_API_URL;
 
-// A interface agora reflete que 'pergunta' e 'resposta' são opcionais no estado inicial
+// A interface agora reflete que 'duvidaAluno' e 'resposta' são opcionais no estado inicial
 interface Duvida {
     id: number;
     titulo: string;
     data_criacao: string;
     status_resposta: 'RESPONDIDA' | 'AGUARDANDO RESPOSTA' | string;
-    pergunta?: string; 
+    duvidaAluno?: string; // Tornou-se opcional para o estado inicial
     resposta?: string;
 }
 
-// Interface para a resposta do endpoint de detalhe (ajuste se os nomes dos campos forem diferentes)
+// Interface para a resposta do endpoint de detalhe
 interface DuvidaDetalhe {
     duvidaAluno: string;
     respostaProfessor?: string;
@@ -23,7 +23,6 @@ interface DuvidaDetalhe {
 export function Duvidas() {
     const [activeView, setActiveView] = useState<'lista' | 'formulario'>('lista');
     const [duvidas, setDuvidas] = useState<Duvida[]>([]);
-    // 'expandedIndex' agora também pode controlar um estado de loading para o detalhe
     const [expandedState, setExpandedState] = useState<{ index: number; isLoading: boolean } | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -46,12 +45,11 @@ export function Duvidas() {
         try {
             const token = localStorage.getItem('token');
             if (!token) throw new Error('Token não encontrado.');
-            
+
             const response = await axios.get<Duvida[]>(`${apiUrl}/duvidas/ExibirDuvidas/`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
-            
-            // Note que não adicionamos 'pergunta' ou 'resposta' aqui. Elas serão buscadas depois.
+
             setDuvidas(response.data.sort((a, b) => new Date(b.data_criacao).getTime() - new Date(a.data_criacao).getTime()));
         } catch (err) {
             setError('Erro ao carregar as dúvidas.');
@@ -60,20 +58,18 @@ export function Duvidas() {
         }
     };
 
-    // --- FUNÇÃO handleExpand CORRIGIDA ---
     const handleExpand = async (index: number) => {
-        // Se já estiver expandido, fecha e sai.
         if (expandedState?.index === index) {
             setExpandedState(null);
             return;
         }
 
         const duvidaSelecionada = duvidas[index];
-        setExpandedState({ index, isLoading: true }); // Mostra o "carregando..." para o detalhe
+        setExpandedState({ index, isLoading: true });
 
         try {
-            // Se já tivermos os detalhes, não busca de novo. Apenas expande.
-            if (duvidaSelecionada.pergunta) {
+            // Se já tivermos os detalhes (duvidaAluno já existe), não busca de novo.
+            if (duvidaSelecionada.duvidaAluno) {
                 setExpandedState({ index, isLoading: false });
                 return;
             }
@@ -81,37 +77,33 @@ export function Duvidas() {
             const token = localStorage.getItem('token');
             if (!token) throw new Error('Token não encontrado.');
 
-            // !!!!! ATENÇÃO: ESTE É O ENDPOINT DE DETALHE !!!!!
-            // Verifique se '/duvidas/duvida/${duvidaSelecionada.id}/' é o endereço correto.
             const response = await axios.get<DuvidaDetalhe>(`${apiUrl}/duvidas/duvida/${duvidaSelecionada.id}/`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
 
             // Atualiza o item específico no array de dúvidas com os novos detalhes
             const updatedDuvidas = [...duvidas];
-            updatedDuvidas[index].pergunta = response.data.duvidaAluno;
+            updatedDuvidas[index].duvidaAluno = response.data.duvidaAluno;
             updatedDuvidas[index].resposta = response.data.respostaProfessor;
             setDuvidas(updatedDuvidas);
 
         } catch (err) {
-            // Mesmo com erro, podemos querer mostrar uma mensagem no local
             const updatedDuvidas = [...duvidas];
-            updatedDuvidas[index].pergunta = "Não foi possível carregar os detalhes da pergunta.";
+            updatedDuvidas[index].duvidaAluno = "Não foi possível carregar os detalhes da pergunta.";
             setDuvidas(updatedDuvidas);
             console.error("Erro ao buscar detalhe da dúvida:", err);
         } finally {
-            setExpandedState({ index, isLoading: false }); // Termina o loading e exibe o conteúdo
+            setExpandedState({ index, isLoading: false });
         }
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
-        // (O código do handleSubmit da resposta anterior está correto e não precisa de alteração)
         e.preventDefault();
         setSubmitStatus({ loading: true, error: null, success: false });
         try {
             const token = localStorage.getItem('token');
             if (!token) throw new Error('Token não encontrado.');
-            
+
             const response = await axios.post<Duvida>(`${apiUrl}/duvidas/duvidas/`, formState, {
                 headers: {
                     'Content-Type': 'application/json',
@@ -144,13 +136,12 @@ export function Duvidas() {
             fetchDuvidas();
         }
     }, [activeView]);
-    
+
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value, type } = e.target;
         setFormState(prev => ({ ...prev, [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value }));
     };
 
-    // O resto do JSX continua aqui...
     return (
         <div className='mt-[0px] absolute top-[-10px] left-[-550px]'>
             <h1 className='text-center text-3xl italic font-bold ml-[60px]'>DÚVIDAS</h1>
@@ -173,7 +164,7 @@ export function Duvidas() {
             <div className='w-[1000px] min-h-[500px] mt-8 ml-40 bg-white border-2 border-[#707070] shadow-lg'>
                 <div className='h-4 w-full bg-[#0E7886]'></div>
                 <div className='px-4 py-6 text-black'>
-                    
+
                     {activeView === 'lista' && (
                         <>
                             {isLoading && <p className="text-center py-10">Carregando...</p>}
@@ -194,8 +185,7 @@ export function Duvidas() {
                                                 <p className={isAnswered ? 'text-green-500 font-bold' : 'text-yellow-500 font-bold'}>{item.status_resposta}</p>
                                             </div>
                                         </div>
-                                        
-                                        {/* Lógica de exibição do detalhe */}
+
                                         {isExpanded && (
                                             <div className="w-full px-4 pb-2">
                                                 {expandedState.isLoading ? (
@@ -204,9 +194,10 @@ export function Duvidas() {
                                                     <>
                                                         <div className='my-2 ml-16 p-4 border border-[#707070] rounded-lg bg-gray-100 max-w-[800px]'>
                                                             <p className='text-sm font-bold mb-1'>Pergunta:</p>
-                                                            <p className='text-xs whitespace-pre-wrap'>{item.pergunta}</p>
+                                                            {/* ----- CORREÇÃO APLICADA AQUI ----- */}
+                                                            <p className='text-xs whitespace-pre-wrap'>{item.duvidaAluno}</p>
                                                         </div>
-                                                        {isAnswered && (
+                                                        {isAnswered && item.resposta && (
                                                             <div className='my-2 ml-16 p-4 border border-[#707070] rounded-lg bg-gray-300 max-w-[800px]'>
                                                                 <p className='text-sm font-bold mb-1'>Resposta:</p>
                                                                 <p className='text-xs whitespace-pre-wrap'>{item.resposta}</p>
@@ -223,7 +214,6 @@ export function Duvidas() {
                     )}
 
                     {activeView === 'formulario' && (
-                        // O JSX do formulário da resposta anterior está correto
                         <div className="px-8 py-4">
                             {submitStatus.success ? (
                                 <div className="text-center p-10 bg-green-100 text-green-800 rounded-lg">
