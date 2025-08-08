@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import megaphone from '../../../public/img/megaphone.png';
 import confetti from '../../../public/img/confetti.png';

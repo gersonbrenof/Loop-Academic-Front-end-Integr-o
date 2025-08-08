@@ -1,14 +1,29 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { FaArrowLeft, FaAngleLeft, FaAngleRight } from 'react-icons/fa';
 import { IoCloseSharp } from 'react-icons/io5';
 import MaterialDeApoioItems from '../data/MaterialDeApoioItens';
 
+// CORREÇÃO: A propriedade 'tipo' foi alterada para 'string' para corresponder
+// à inferência de tipo que o TypeScript faz a partir do seu arquivo de dados.
+interface MaterialItem {
+  pagina: string; 
+  tipo: string; // <-- A CORREÇÃO ESTÁ AQUI
+  titulo: string;
+  material: string;
+  introduao02?: string;
+  recomendado?: string;
+  arquivo?: string;
+  imgArquivo?: string;
+  tituloArquivo?: string;
+  similar?: string;
+}
+
 export function Material() {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedPdf, setSelectedPdf] = useState(null);
+  const [selectedPdf, setSelectedPdf] = useState<string | null>(null);
 
-  const handleSelectExercise = (index) => {
+  const handleSelectExercise = (index: number) => {
     setSelectedIndex(index);
   };
 
@@ -24,15 +39,16 @@ export function Material() {
     }
   };
 
-  const selectedExercise = MaterialDeApoioItems[selectedIndex];
+  // Esta linha agora funciona, pois a interface é compatível com os dados.
+  const selectedExercise: MaterialItem = MaterialDeApoioItems[selectedIndex];
 
-  const getEmbedLink = (link) => {
+  const getEmbedLink = (link: string) => {
     return link.includes("embed")
       ? link
       : link.replace("watch?v=", "embed/");
   };
 
-  const handlePdfClick = (pdf) => {
+  const handlePdfClick = (pdf: string) => {
     setSelectedPdf(pdf);
     setIsModalOpen(true);
   };
@@ -70,7 +86,7 @@ export function Material() {
             <h2 className='text-[#0E7886] text-2xl font-semibold mb-4'>{selectedExercise.recomendado}</h2>
             <div className='w-full h-px bg-black mb-4 -mt-4'></div>
             <div className='flex flex-col items-center'>
-              <button onClick={() => handlePdfClick(selectedExercise.arquivo)}>
+              <button onClick={() => selectedExercise.arquivo && handlePdfClick(selectedExercise.arquivo)} disabled={!selectedExercise.arquivo}>
                 <img 
                   className='w-24'
                   src={selectedExercise.imgArquivo} 
@@ -85,7 +101,7 @@ export function Material() {
             <h2 className='text-[#0E7886] text-2xl font-semibold mb-4'>{selectedExercise.similar}</h2>
             <div className='w-full h-px bg-black mb-4 -mt-4'></div>
             <div className='flex flex-col items-center'>
-              <button onClick={() => handlePdfClick(selectedExercise.arquivo)}>
+              <button onClick={() => selectedExercise.arquivo && handlePdfClick(selectedExercise.arquivo)} disabled={!selectedExercise.arquivo}>
                 <img 
                   className='w-24'
                   src={selectedExercise.imgArquivo} 
@@ -159,9 +175,9 @@ export function Material() {
           <h1 className='text-lg'>Introdução à Linguagem C</h1>
         </div>
 
-        {MaterialDeApoioItems.map((item, index) => (
+        {(MaterialDeApoioItems as MaterialItem[]).map((item, index) => (
           <button
-            key={item.tipo}
+            key={item.tipo + item.titulo + index} 
             className={`h-[115px] w-[200px] border-2 border-[#707070] relative ${index === selectedIndex ? 'bg-white text-black' : 'bg-[#302D2D] text-white'}`}
             onClick={() => handleSelectExercise(index)}
           >
@@ -179,8 +195,8 @@ export function Material() {
       </div>
 
       {isModalOpen && (
-        <div className='fixed inset-0 flex items-center justify-center bg-black bg-opacity-50'>
-          <div className='relative w-[900px] h-[350px] bg-white shadow-lg z-50 text-black'>
+        <div className='fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50'>
+          <div className='relative w-[900px] h-[350px] bg-white shadow-lg text-black'>
             <h1 className='text-xl bg-[#0E7886] text-white h-[51px] flex items-center p-5'>Apostila</h1>
             <div className='p-5'>
               <p>Consulte aqui as apostilas destinadas a te auxiliar em seus estudos.</p>
@@ -195,7 +211,7 @@ export function Material() {
               </div>
               <div className='flex justify-end mt-4'>
                 <a
-                  href={selectedPdf}
+                  href={selectedPdf ?? undefined}
                   download
                   className='bg-[#0E7886] text-white py-2 px-4 text-xl w-[200px] flex justify-center'
                 >
@@ -206,9 +222,9 @@ export function Material() {
             
             <button
               onClick={closeModal}
-              className='absolute top-[-10px] right-[-10px] w-8 h-8 bg-red-700 text-white flex items-center justify-center'
+              className='absolute top-[-10px] right-[-10px] w-8 h-8 bg-red-700 text-white flex items-center justify-center rounded-full'
             >
-              <IoCloseSharp className='w-8 h-8' />
+              <IoCloseSharp className='w-7 h-7' />
             </button>
           </div>
         </div>

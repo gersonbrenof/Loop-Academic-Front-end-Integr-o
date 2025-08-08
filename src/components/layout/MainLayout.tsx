@@ -1,8 +1,8 @@
-import React from 'react';
+// import React from 'react';
 import { Outlet } from 'react-router-dom';
 
 import { Header } from './Header';
-import { Navbar } from './MenuPrincipal'; // Se o Navbar for o menu superior
+// import { Navbar } from './MenuPrincipal'; // Se o Navbar for o menu superior
 import { MenuLateral } from './MenuLateral';
 import { Footer } from './Footer';
 

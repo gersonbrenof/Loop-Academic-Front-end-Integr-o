@@ -14,7 +14,7 @@ import { Material } from './components/pages/Material';
 import { Usuario } from './components/pages/Usuario';
 
 import './index.css';
-import { ListasDeExercicios01 } from './components/pages/Listas-De-Exercicios-01';
+// import { ListasDeExercicios01 } from './components/pages/Listas-De-Exercicios-01';
 
 const App = () => {
   return (

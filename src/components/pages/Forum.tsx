@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom'; // Usar Link em vez de <a> para navegação SPA
 import { FaArrowLeft } from 'react-icons/fa';
 import axios from 'axios';

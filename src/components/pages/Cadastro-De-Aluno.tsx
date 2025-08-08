@@ -1,7 +1,9 @@
 import { FaArrowLeft } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, ChangeEvent } from 'react'; // Importar ChangeEvent
+
 const apiUrl = import.meta.env.VITE_API_URL;
+
 export function CadastroDeAluno() {
     const navigate = useNavigate();
     const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -20,7 +22,8 @@ export function CadastroDeAluno() {
         navigate(-1); // Volta para a página anterior
     };
 
-    const handleInputChange = (e) => {
+    // CORRIGIDO: Adicionada a tipagem para o evento 'e'
+    const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
         setFormData({
             ...formData,
@@ -65,11 +68,13 @@ export function CadastroDeAluno() {
             } else {
                 const data = await response.json();
                 console.error('Erro no cadastro:', data);
-                setErrorMessage('Erro ao realizar o cadastro.');
+                // Tenta pegar uma mensagem de erro mais específica da API
+                const errorMsg = Object.values(data).join(' ');
+                setErrorMessage(errorMsg || 'Erro ao realizar o cadastro.');
             }
         } catch (error) {
             console.error('Erro na requisição:', error);
-            setErrorMessage('Erro ao realizar o cadastro.');
+            setErrorMessage('Erro de comunicação com o servidor.');
         }
     };
 
@@ -78,11 +83,11 @@ export function CadastroDeAluno() {
     };
 
     return (
-        <div className='bg-[#0E7886] w-[1520px] h-[500px] min-h-screen flex items-start justify-center py-36 relative'>
-            <button onClick={handleBack} className='mr-5 mt-5'>
+        <div className='bg-[#0E7886] w-full min-h-screen flex items-start justify-center py-36 relative'>
+            <button onClick={handleBack} className='absolute top-10 left-10'>
                 <FaArrowLeft className='text-white text-2xl w-10 h-auto' />
             </button>
-            <div className='bg-white px-5 py-6 shadow-lg w-[889px] h-auto'>
+            <div className='bg-white px-5 py-6 shadow-lg w-full max-w-4xl h-auto'>
                 <h1 className='text-[#0E7886] text-2xl mb-4'>Dados Cadastrais - Aluno</h1>
 
                 <div className='flex flex-col'>
@@ -95,7 +100,7 @@ export function CadastroDeAluno() {
                             placeholder='Nome Completo'
                             className='p-2 border-b border-gray-300 outline-none focus:border-[#0E7886]'
                         />
-                        <div className='flex space-x-4'>
+                        <div className='flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-4'>
                             <input
                                 type='text'
                                 name='instituicao'
@@ -114,7 +119,7 @@ export function CadastroDeAluno() {
                             />
                         </div>
 
-                        <div className='flex space-x-4'>
+                        <div className='flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-4'>
                             <input
                                 type='email'
                                 name='email'
@@ -133,7 +138,7 @@ export function CadastroDeAluno() {
                             />
                         </div>
 
-                        <div className='flex space-x-4'>
+                        <div className='flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-4'>
                             <input
                                 type='password'
                                 name='password'
@@ -160,7 +165,7 @@ export function CadastroDeAluno() {
                         <div className='flex justify-end pt-10'>
                             <button
                                 onClick={handleCadastro}
-                                className='bg-[#0E7886] text-white text-xl py-2 px-4 w-[190px] h-[41px]'
+                                className='bg-[#0E7886] text-white text-xl py-2 px-4 w-[190px] h-[41px] rounded'
                             >
                                 Cadastrar
                             </button>
@@ -169,12 +174,12 @@ export function CadastroDeAluno() {
                 </div>
 
                 {showSuccessModal && (
-                    <div className='absolute top-0 left-0 w-full h-full flex items-center justify-center bg-black bg-opacity-50'>
-                        <div className='bg-white p-6 w-[651px] h-[179px] shadow-lg text-center'>
+                    <div className='fixed inset-0 w-full h-full flex items-center justify-center bg-black bg-opacity-50 z-50'>
+                        <div className='bg-white p-6 w-[651px] h-[179px] shadow-lg text-center flex flex-col justify-center items-center rounded-lg'>
                             <h2 className='text-2xl mb-10 text-green-600'>Cadastro realizado com sucesso!</h2>
                             <button
                                 onClick={handleLoginRedirect}
-                                className='bg-[#0E7886] text-white text-xl w-[190px] h-[41px]'
+                                className='bg-[#0E7886] text-white text-xl w-[190px] h-[41px] rounded'
                             >
                                 Login
                             </button>
