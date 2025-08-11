@@ -3,23 +3,81 @@ import { FaArrowLeft } from 'react-icons/fa';
 import { Link, useNavigate } from 'react-router-dom';
 
 export function CriarTopico() {
-  // 3. ADIÇÃO: Estados para controlar os valores dos campos do formulário.
   const [titulo, setTitulo] = useState('');
   const [categoria, setCategoria] = useState('');
   const [conteudo, setConteudo] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
-  // 4. ADIÇÃO: Função para lidar com a submissão do formulário.
-  const handleCriarTopico = () => {
-    // Aqui você adicionaria a lógica para enviar os dados para a sua API.
-    console.log({
-      titulo,
-      categoria,
-      conteudo,
-    });
-    // Exemplo: após criar o tópico, redirecionar para o fórum.
-    alert('Tópico criado com sucesso! (Simulação)');
-    navigate('/Forum');
+  const apiUrl = import.meta.env.VITE_API_URL;
+
+  const handleCriarTopico = async () => {
+    if (isLoading) return;
+
+    // 1. CORREÇÃO: Obter o token de autenticação com a chave correta 'token'.
+    const token = localStorage.getItem('token'); 
+
+    // 2. Verificar se o usuário está autenticado
+    if (!token) {
+      alert('Você precisa estar logado para criar um tópico.');
+      navigate('/login'); 
+      return;
+    }
+
+    if (!titulo || !categoria || !conteudo) {
+      alert('Por favor, preencha todos os campos.');
+      return;
+    }
+    
+    setIsLoading(true);
+
+    try {
+      const requestBody = {
+        titulo: titulo,
+        descricao: conteudo, 
+        categoria: categoria,
+      };
+
+      // 3. Realizar a chamada POST para a API com o cabeçalho de autorização
+      const response = await fetch(`${apiUrl}/ForumForum/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`, 
+        },
+        body: JSON.stringify(requestBody),
+      });
+
+      // 4. Tratamento específico para erro de autenticação (token expirado/inválido)
+      if (response.status === 401 || response.status === 403) {
+        alert('Sua sessão expirou ou é inválida. Por favor, faça login novamente.');
+        // CORREÇÃO: Remover o token inválido usando a chave correta 'token'.
+        localStorage.removeItem('token'); 
+        navigate('/login');
+        return;
+      }
+
+      if (!response.ok) {
+        // Tenta ler a mensagem de erro do corpo da resposta, se houver
+        const errorData = await response.json().catch(() => null);
+        const errorMessage = errorData?.detail || response.statusText;
+        throw new Error(`Erro na API: ${errorMessage}`);
+      }
+      
+      alert('Tópico criado com sucesso!');
+      navigate('/Forum');
+
+    } catch (error) {
+  console.error('Falha ao criar o tópico:', error);
+
+  if (error instanceof Error) {
+    alert(`Ocorreu um erro ao criar o tópico: ${error.message}`);
+  } else {
+    alert(`Ocorreu um erro ao criar o tópico: ${String(error)}`);
+  }
+} finally {
+  setIsLoading(false);
+}
   };
 
 
@@ -28,7 +86,6 @@ export function CriarTopico() {
       <h1 className='text-center text-3xl italic font-bold ml-[200px]'>CRIAR TÓPICO</h1>
 
       <div className='flex pt-20'>
-        {/* 5. SUGESTÃO: Usar o componente <Link> para navegação sem recarregar a página. */}
         <Link to='/Forum' className='flex flex-col items-center py-1 h-full ml-9'>
           <FaArrowLeft className='w-10 h-auto' />
           <p className='w-32 text-sm text-center'>Retornar</p>
@@ -68,9 +125,10 @@ export function CriarTopico() {
           </div>
           <button 
             onClick={handleCriarTopico}
-            className='text-xl text-white bg-[#0E7886] py-2 px-14 mt-6 rounded-md hover:bg-[#0b5a66]'
+            disabled={isLoading} 
+            className='text-xl text-white bg-[#0E7886] py-2 px-14 mt-6 rounded-md hover:bg-[#0b5a66] disabled:bg-gray-400 disabled:cursor-not-allowed'
           >
-            Criar
+            {isLoading ? 'Criando...' : 'Criar'}
           </button>
         </div>
       </div>

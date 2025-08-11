@@ -1,29 +1,48 @@
+// vite.config.ts
+
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import { viteStaticCopy } from 'vite-plugin-static-copy'
+
+// --- ADICIONE ESTAS DUAS LINHAS ---
 import path from 'path'
 import { fileURLToPath } from 'url'
+// ------------------------------------
 
-// Corrige '__dirname' e '__filename' no contexto ESM
+// --- E ADICIONE ESTA LINHA TAMBÉM ---
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
+// ------------------------------------
 
 export default defineConfig({
-  plugins: [react()],
+  base: '/',
+  plugins: [
+    react(),
+    viteStaticCopy({
+      targets: [
+        {
+          src: 'public/*',
+          dest: 'public'
+        }
+      ]
+    })
+  ],
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src'),
+      // Agora o 'path' e o '__dirname' são reconhecidos
+      '@': path.resolve(__dirname, 'src'),
     },
   },
-  build: {
-    outDir: 'dist',
-  },
+  // ... resto da configuração
   server: {
     host: '0.0.0.0',
     port: 5173,
     strictPort: true,
     cors: true,
     open: true,
-    // allowedHosts removido
   },
-  base: './',
+  build: {
+    outDir: 'dist',
+    assetsDir: 'assets',
+  },
 })
