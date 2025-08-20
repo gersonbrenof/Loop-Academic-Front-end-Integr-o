@@ -155,12 +155,12 @@ export function Header() {
             <Route path='/Enviar-Duvidas' element={<EnviarDuvidas />} />
             <Route path='/Forum' element={<Forum />} />
             <Route path='/Criar-Topico' element={<CriarTopico />} />
-            <Route path='/Topico01' element={<Topico01 />} />
+           <Route path='/topico/:topicId' element={<Topico01 />} />
             <Route path='/Emblemas' element={<Emblemas />} />
             <Route path='/Todos-os-Emblemas' element={<TodosOsEmblemas />} />
             <Route path="/Listas-De-Exercicios-01/:id" element={<ListasDeExercicios01 />} />
             <Route path='/Listas-De-Exercicios-02' element={<ListasDeExercicios02 />} />
-            <Route path='/Material-De-Apoio-02' element={<MaterialDeApoio02 />} />
+            <Route path="/material-de-apoio/:materialId" element={<MaterialDeApoio02 />} />
           </Routes>
         </div>
 

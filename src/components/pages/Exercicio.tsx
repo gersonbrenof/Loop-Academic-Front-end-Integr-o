@@ -19,7 +19,6 @@ interface ExercicioDetalhado {
   numeroDoExercicio: number;
   lista: ListaInfo;
   dica?: string;
-  // ... outros campos ...
   codigo?: string;
 }
 
@@ -29,11 +28,31 @@ interface ExercicioDaLista {
   numeroDoExercicio: number;
 }
 
-// ***** NOVA INTERFACE PARA O RESULTADO DA SUBMISSÃO *****
 interface SubmissionResult {
   mensagem: string;
-  resultado: 'Correto' | 'Incorreto' | string; // Usamos tipos literais para melhor autocompletar
+  resultado: 'Correto' | 'Incorreto' | string;
   pontuacao: number;
+}
+
+// ***** NOVA INTERFACE PARA OS DADOS DAS DICAS *****
+interface DicasData {
+    id: number;
+    codigoApoio: string;
+    discricaoDetalhada: {
+        id: number;
+        descricao: string;
+    };
+    sintaxe: {
+        id: number;
+        titulo: string;
+        descricao: string;
+    };
+    problema: {
+        id: number;
+        numeroDica: number;
+        conteudoDica: string;
+        imagemExemplo: string | null; // Pode ser nulo
+    };
 }
 
 
@@ -47,8 +66,6 @@ export function Exercicio() {
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
-  // ***** NOVO ESTADO PARA ARMAZENAR O RESULTADO *****
   const [submissionResult, setSubmissionResult] = useState<SubmissionResult | null>(null);
   
   // Estados para navegação
@@ -59,11 +76,18 @@ export function Exercicio() {
   // Estados dos modais
   const [showDicas, setShowDicas] = useState(false);
   const [showCodigoApoio, setShowCodigoApoio] = useState(false);
+  
+  // ***** NOVOS ESTADOS PARA O MODAL DE DICAS *****
+  const [dicasData, setDicasData] = useState<DicasData | null>(null);
+  const [dicasLoading, setDicasLoading] = useState(false);
+  const [dicasError, setDicasError] = useState<string | null>(null);
+
 
   // --- LÓGICA DE BUSCA DE DADOS (ROBUSTA) ---
   useEffect(() => {
-    // Reseta o resultado da submissão ao carregar um novo exercício
+    // Reseta os estados ao carregar um novo exercício
     setSubmissionResult(null);
+    setDicasData(null); // ***** NOVO: Reseta os dados das dicas *****
 
     const carregarDadosDoExercicio = async () => {
       // ... (sua lógica de busca de dados permanece a mesma)
@@ -110,7 +134,7 @@ export function Exercicio() {
     };
 
     carregarDadosDoExercicio();
-  }, [exercicioId]);
+  }, [exercicioId, location.state]); // Adicionado location.state como dependência
 
   // --- FUNÇÕES DE AÇÃO ---
   const navegarParaExercicio = (novoIndice: number) => {
@@ -119,17 +143,14 @@ export function Exercicio() {
       navigate(`/exercicio/responder/${proximoId}`, { state: { exerciciosDaLista, listaTitulo } });
     }
   };
-  
-  // ***** FUNÇÃO DE ENVIO ATUALIZADA *****
+
   const handleEnviarCodigo = async () => {
+    // ... (sua função de envio permanece a mesma)
     if (!code.trim()) {
       alert('Por favor, escreva seu código antes de enviar.');
       return;
     }
-    
-    // Reseta o resultado anterior antes de uma nova tentativa
     setSubmissionResult(null);
-
     try {
       const token = localStorage.getItem('token');
       if (!token) {
@@ -137,9 +158,7 @@ export function Exercicio() {
         navigate('/login');
         return;
       }
-
       const url = `${apiUrl}/exercicio/exercicio/responder-exercicio/${exercicioId}/`;
-
       const response = await axios.post(
         url,
         { codigoDoExercicio: code },
@@ -150,13 +169,8 @@ export function Exercicio() {
           }
         }
       );
-
       const resultData: SubmissionResult = response.data;
-      
-      // Armazena o resultado no estado para ser exibido na tela
       setSubmissionResult(resultData);
-
-      // Se a resposta for correta, navega para o próximo exercício após um pequeno delay
       if (resultData.resultado === 'Correto') {
         setTimeout(() => {
           if (indiceAtual < exerciciosDaLista.length - 1) {
@@ -165,18 +179,41 @@ export function Exercicio() {
             alert('Parabéns! Você concluiu todos os exercícios da lista!');
             navigate('/listas');
           }
-        }, 2000); // Espera 2 segundos para o usuário ver a mensagem de sucesso
+        }, 2000);
       }
-      
     } catch (err: any) {
       console.error('Erro ao enviar o exercício:', err);
       const errorMessage = err.response?.data?.detail || err.response?.data?.error || 'Ocorreu um erro ao enviar sua resposta.';
-      // Exibe o erro na própria caixa de feedback
       setSubmissionResult({
           resultado: 'Incorreto',
           mensagem: errorMessage,
           pontuacao: 0
       });
+    }
+  };
+  
+  // ***** NOVA FUNÇÃO PARA CARREGAR E ABRIR O MODAL DE DICAS *****
+  const handleAbrirDicas = async () => {
+    setShowDicas(true); // Abre o modal imediatamente
+
+    // Se os dados já foram carregados, não busca de novo
+    if (dicasData) {
+        return;
+    }
+
+    setDicasLoading(true);
+    setDicasError(null);
+    try {
+        const token = localStorage.getItem('token');
+        const response = await axios.get<DicasData>(`${apiUrl}/exercicio/dicas/${exercicioId}/`, {
+            headers: { Authorization: `Bearer ${token}` },
+        });
+        setDicasData(response.data);
+    } catch (err) {
+        setDicasError('Não foi possível carregar as dicas para este exercício.');
+        console.error("Erro ao buscar dicas:", err);
+    } finally {
+        setDicasLoading(false);
     }
   };
 
@@ -214,13 +251,15 @@ export function Exercicio() {
                   <p className='w-[600px]'>Consulte abaixo o conteúdo auxiliar preparado especialmente para você =]</p>
                 </div>
                 <div className='space-x-6'>
-                  <button className='bg-[#0E7886] w-[170px] h-[41px] text-white' onClick={() => setShowDicas(true)}>Dicas</button>
+                  {/* ***** ALTERADO: onClick agora chama a nova função ***** */}
+                  <button className='bg-[#0E7886] w-[170px] h-[41px] text-white' onClick={handleAbrirDicas}>Dicas</button>
                   <button className='bg-[#0E7886] w-[170px] h-[41px] text-white' onClick={() => setShowCodigoApoio(true)}>Código de Apoio</button>
                   <Link to='/material' className='inline-block bg-[#0E7886] w-[170px] h-[41px] text-white text-center leading-[41px]'>Material de Apoio</Link>
                 </div>
               </div>
             </div>
-            <div className='relative flex flex-col h-full'>
+            {/* ... o restante da sua UI para o editor de código e resultado da submissão ... */}
+             <div className='relative flex flex-col h-full'>
                 <div className="flex h-[550px]">
                     <div className='bg-gray-800 text-white p-4 text-right overflow-hidden'>
                         {Array.from({ length: lineCount }, (_, i) => <div key={i}>{i + 1}</div>)}
@@ -233,7 +272,6 @@ export function Exercicio() {
                     />
                 </div>
               
-                {/* ***** AQUI ESTÁ A CAIXA DE FEEDBACK ***** */}
                 {submissionResult && (
                     <div className={`w-[582px] p-4 text-white font-semibold ${submissionResult.resultado === 'Correto' ? 'bg-green-500' : 'bg-red-500'}`}>
                         <div className="flex justify-between items-center">
@@ -256,8 +294,8 @@ export function Exercicio() {
                 </div>
             </div>
           </div>
+          {/* ... o restante da sua UI para navegação entre exercícios ... */}
           <div className='mt-10 flex justify-center'>
-            {/* ... botões de navegação anterior/próximo ... */}
              <div className='flex text-white shadow-md'>
               <button
                 className={`w-[400px] h-[60px] flex items-center justify-center ${indiceAtual === 0 ? 'bg-gray-400' : 'bg-red-600'}`}
@@ -273,8 +311,8 @@ export function Exercicio() {
           </div>
         </div>
       </div>
+      {/* ... sua lista lateral de exercícios ... */}
       <div className='ml-[1310px] bg-[#302D2DCC] w-[200px] h-full min-h-screen'>
-        {/* ... sua lista de exercícios ... */}
         <div className='text-white p-4'>
           <p>{listaTitulo}</p>
         </div>
@@ -293,20 +331,65 @@ export function Exercicio() {
         ))}
       </div>
       
-      {/* ... seus modais ... */}
+      {/* ***** MODAL DE DICAS ATUALIZADO ***** */}
       {showDicas && (
-        <div className='fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center'>
-          <div className='relative w-[1000px] h-auto bg-white shadow-lg text-black'>
-            <h1 className='text-2xl font-semibold bg-[#0E7886] text-white h-[51px] flex items-center p-5'>Dicas</h1>
-            <p className='p-5'>Consulte aqui as dicas especialmente preparadas para auxiliar-lhe na resolução do exercício.</p>
-            <div className="p-5">
-              <p>O conteúdo detalhado das dicas para este exercício não está disponível no momento.</p>
-              <p className="mt-2"><b>Sugestão:</b> Revise a descrição do problema e o material de apoio.</p>
+        <div className='fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4'>
+          <div className='relative w-full max-w-4xl h-auto max-h-[90vh] bg-white shadow-lg text-black rounded-md'>
+            <div className='sticky top-0 bg-[#0E7886] text-white h-[51px] flex items-center justify-between p-5 rounded-t-md'>
+                <h1 className='text-2xl font-semibold'>Dicas & Dúvidas</h1>
+                <button onClick={handleCloseModal(setShowDicas)} className='w-8 h-8 text-white flex items-center justify-center'><IoCloseSharp className='w-8 h-8' /></button>
             </div>
-            <button onClick={handleCloseModal(setShowDicas)} className='absolute top-[-10px] right-[-10px] w-8 h-8 bg-red-700 text-white flex items-center justify-center rounded-full'><IoCloseSharp className='w-6 h-6' /></button>
+            
+            <div className="p-6 overflow-y-auto" style={{ maxHeight: 'calc(90vh - 51px)' }}>
+                {dicasLoading && <p className="text-center text-lg">Carregando dicas...</p>}
+                {dicasError && <p className="text-center text-lg text-red-600">{dicasError}</p>}
+                
+                {dicasData && !dicasLoading && (
+                    <div className="space-y-6">
+                        {/* Seção de Descrição Detalhada */}
+                        {dicasData.discricaoDetalhada?.descricao && (
+                            <div>
+                                <h2 className="text-xl font-bold text-[#0E7886] border-b-2 border-[#0E7886] pb-1 mb-2">Descrição Detalhada</h2>
+                                <p>{dicasData.discricaoDetalhada.descricao}</p>
+                            </div>
+                        )}
+
+                        {/* Seção de Sintaxe */}
+                        {dicasData.sintaxe?.titulo && (
+                             <div>
+                                <h2 className="text-xl font-bold text-[#0E7886] border-b-2 border-[#0E7886] pb-1 mb-2">{dicasData.sintaxe.titulo}</h2>
+                                <p className="whitespace-pre-wrap">{dicasData.sintaxe.descricao}</p>
+                            </div>
+                        )}
+
+                        {/* Seção de Ajuda com o Problema */}
+                        {dicasData.problema?.conteudoDica && (
+                            <div>
+                                <h2 className="text-xl font-bold text-[#0E7886] border-b-2 border-[#0E7886] pb-1 mb-2">Ajuda com o Problema (Dica #{dicasData.problema.numeroDica})</h2>
+                                <p>{dicasData.problema.conteudoDica}</p>
+                                {dicasData.problema.imagemExemplo && (
+                                    <img src={dicasData.problema.imagemExemplo} alt="Exemplo visual" className="mt-3 border rounded shadow-md" />
+                                )}
+                            </div>
+                        )}
+
+                        {/* Seção de Código de Apoio da Dica */}
+                        {dicasData.codigoApoio && (
+                             <div>
+                                <h2 className="text-xl font-bold text-[#0E7886] border-b-2 border-[#0E7886] pb-1 mb-2">Exemplo de Código</h2>
+                                <pre className="bg-gray-800 text-white p-4 rounded-md overflow-x-auto">
+                                    <code>{dicasData.codigoApoio}</code>
+                                </pre>
+                            </div>
+                        )}
+                    </div>
+                )}
+            </div>
           </div>
         </div>
       )}
+
+      {/* Seu modal de Código de Apoio permanece o mesmo */}
       {showCodigoApoio && (
         <div className='fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center'>
           <div className='relative w-full max-w-4xl h-auto bg-white shadow-lg z-50 text-black'>
