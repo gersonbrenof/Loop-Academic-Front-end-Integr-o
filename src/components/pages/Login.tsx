@@ -147,7 +147,7 @@ export function Login() {
                 </div>
             </div>
 
-            <button onClick={() => navigate('/cadastro-de-aluno')} className="bg-white w-96 h-20 shadow-lg p-5 flex items-center justify-between rounded-lg">
+            <button onClick={() => navigate('/usuario')} className="bg-white w-96 h-20 shadow-lg p-5 flex items-center justify-between rounded-lg">
                 <h2 className="mb-8 pt-8 text-[#0E7886] text-2xl opacity-80">Criar minha conta</h2>
                 <FaChevronRight className="text-[#0E7886] text-[25px]" />
             </button>

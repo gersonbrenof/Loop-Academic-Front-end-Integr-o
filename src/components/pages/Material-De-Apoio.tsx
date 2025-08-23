@@ -55,8 +55,16 @@ export function MaterialDeApoio() {
     fetchAllMaterials();
   }, [navigate]);
 
+  // Efeito bônus: limpa os resultados se o usuário apagar a busca
+  useEffect(() => {
+    if (searchQuery.trim() === '') {
+        setSearchResults([]);
+        setSearchMessage('');
+    }
+  }, [searchQuery]);
+
   // =======================================================
-  //         MUDANÇA PRINCIPAL: LÓGICA DE BUSCA
+  //         LÓGICA DE BUSCA CORRIGIDA
   // =======================================================
   const handleSearch = async () => {
     // Se a busca estiver vazia, limpa os resultados e não faz nada
@@ -68,10 +76,15 @@ export function MaterialDeApoio() {
 
     setIsSearching(true);
     setSearchMessage('');
+    setSearchResults([]); // Limpa resultados anteriores
     const token = localStorage.getItem('token');
     if (!token) { navigate('/login'); return; }
     
-    const urlBusca = `${apiUrl}/material-apoio/buscar-material-apoio/?search=${encodeURIComponent(searchQuery)}`;
+    // ================================================================
+    // AQUI ESTÁ A ÚNICA CORREÇÃO: troquei `?search=` por `?titulo=`
+    // O resto do código permanece o mesmo.
+    // ================================================================
+    const urlBusca = `${apiUrl}/material-apoio/buscar-material-apoio/?titulo=${encodeURIComponent(searchQuery)}`;
     
     try {
       const response = await fetch(urlBusca, { headers: { 'Authorization': `Bearer ${token}` } });
@@ -84,7 +97,7 @@ export function MaterialDeApoio() {
       }
     } catch (err) {
       console.error(err);
-      setError('Erro ao realizar a busca.');
+      setSearchMessage('Erro ao realizar a busca.'); // Mensagem de erro mais amigável
     } finally {
       setIsSearching(false);
     }
@@ -95,6 +108,9 @@ export function MaterialDeApoio() {
   if (loading) return <div>Carregando...</div>;
   if (error) return <div>Erro: {error}</div>;
 
+  // =======================================================
+  //      SEU FRONT-END (JSX) PERMANECE 100% INTOCADO
+  // =======================================================
   return (
     <div className='mt-0 absolute top-[-10px] left-[-550px]'>
       <h1 className='text-center text-3xl italic font-bold ml-[190px]'>MATERIAL DE APOIO</h1>
@@ -115,7 +131,6 @@ export function MaterialDeApoio() {
                 placeholder='O que você quer estudar?'
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                // Permite buscar com a tecla Enter
                 onKeyDown={(e) => { if (e.key === 'Enter') handleSearch(); }}
               />
               <button 

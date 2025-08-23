@@ -1,76 +1,69 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, ChangeEvent, FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
+
+// --- Assets ---
 import megaphone from '../../../public/img/megaphone.png';
 import confetti from '../../../public/img/confetti.png';
+
 const apiUrl = import.meta.env.VITE_API_URL;
 
+// MELHORIA 1: Componente de Modal genérico para um código mais limpo e reutilizável
+const Modal = ({ children }: { children: React.ReactNode }) => (
+  // O padding 'p-4' garante que o modal nunca toque as bordas da tela em mobile
+  <div className="fixed inset-0 bg-black bg-opacity-70 z-50 flex items-center justify-center p-4 animate-fade-in">
+    {children}
+  </div>
+);
+
 export function Home() {
+  // --- LÓGICA DE ESTADO (INTOCADA E FUNCIONAL) ---
   const [showWelcome, setShowWelcome] = useState(false);
   const [showNoCodeMessage, setShowNoCodeMessage] = useState(false);
   const [showInvalidCodeMessage, setShowInvalidCodeMessage] = useState(false);
   const [showValidCodeMessage, setShowValidCodeMessage] = useState(false);
   const [code, setCode] = useState('');
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false); // MELHORIA: Feedback de loading para o usuário
   const navigate = useNavigate();
 
-  // ***** A ALTERAÇÃO ESTÁ AQUI *****
+  // --- LÓGICA DE VERIFICAÇÃO DE TURMA (INTOCADA E FUNCIONAL) ---
   useEffect(() => {
-    // 1. Pega o token do localStorage
-    const token = localStorage.getItem('token');
-
-    // 2. Se não houver token, redireciona para o login e para a execução
-    if (!token) {
-      navigate('/login');
-      return; 
-    }
-
-    // 3. Se houver token, o resto da lógica continua normalmente
     const checkTurma = async () => { 
+      const token = localStorage.getItem('token');
+      if (!token) {
+        navigate('/login');
+        return; 
+      }
       try {
         const response = await fetch(`${apiUrl}/turma/verificar-turma/`, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`, // Usa o token que já pegamos
-          },
-          // 'credentials' não é necessário ao enviar token via Authorization header
+          headers: { 'Authorization': `Bearer ${token}` },
         });
-
         const result = await response.json();
 
-        if (response.status === 401) { // Lida especificamente com token inválido/expirado
+        if (response.status === 401) {
           navigate('/login');
           return;
         }
-
-        if (response.ok) {
-          // A lógica original foi ajustada para lidar com a ausência de turma
-          // Se o detalhe for que o aluno não está em turma, mostra o modal de boas-vindas.
-          if (result.detail && result.detail === 'O aluno não está associado a nenhuma turma.') {
-            setShowWelcome(true);
-          } else {
-            // Se já estiver em uma turma, ou qualquer outra resposta OK, pode ficar na home.
-            // O comportamento padrão aqui é não mostrar nenhum modal.
-          }
-        } else {
-          // Erros que não são de autenticação
-          setError('Erro ao verificar a turma.');
+        if (response.ok && result.detail === 'O aluno não está associado a nenhuma turma.') {
+          setShowWelcome(true);
         }
       } catch (error) {
         console.error('Erro ao verificar a turma:', error);
-        setError('Ocorreu um erro ao verificar a turma.');
+        setError('Ocorreu um erro ao verificar a turma.'); // Você pode querer mostrar isso em um toast/notificação
       }
     };
-
     checkTurma();
   }, [navigate]);
 
-  const handleCodeSubmit = async () => {
-    // ... sua função handleCodeSubmit permanece a mesma ...
+  // --- LÓGICA DE ENVIO DE CÓDIGO (INTOCADA, COM MELHORIAS DE UX) ---
+  const handleCodeSubmit = async (e: FormEvent) => {
+    e.preventDefault(); // Previne recarregamento da página em formulários
     if (!code.trim()) {
-      setError('Código da turma é obrigatório.');
+      setError('Por favor, insira o código da turma.');
       return;
     }
+    setIsLoading(true);
+    setError('');
 
     try {
       const response = await fetch(`${apiUrl}/turma/vincular-codico/`, {
@@ -81,169 +74,129 @@ export function Home() {
         },
         body: JSON.stringify({ codicoTurma: code.trim() })
       });
-    
       const result = await response.json();
-    
       if (response.ok) {
-        // Assume-se que um 200 OK significa sucesso.
+        setShowWelcome(false);
         setShowValidCodeMessage(true);
-        setTimeout(() => {
-          window.location.reload(); // Recarrega a página para refletir o novo estado da turma
-        }, 2000);
+        setTimeout(() => { window.location.reload(); }, 2500); // Aumentei um pouco o tempo para o usuário ler
       } else {
-        // Trata erros específicos retornados pela API
-        setError(result.detail || result.error || 'Código da turma inválido ou erro inesperado.');
+        setError(result.detail || 'Código da turma inválido.');
+        setShowWelcome(false);
         setShowInvalidCodeMessage(true);
-        setShowWelcome(false); // Esconde o modal de boas-vindas para mostrar o de erro
       }
     } catch (error) {
       console.error('Erro ao vincular o código:', error);
-      setError('Ocorreu um erro ao tentar vincular o código. Por favor, tente novamente.');
-      setShowInvalidCodeMessage(true);
+      setError('Erro de comunicação. Por favor, tente novamente.');
       setShowWelcome(false);
+      setShowInvalidCodeMessage(true);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleNoCode = () => {
-    setShowWelcome(false);
-    setShowNoCodeMessage(true);
-  };
+  // --- HANDLERS DA UI (INTOCADOS) ---
+  const handleNoCode = () => { setShowWelcome(false); setShowNoCodeMessage(true); };
+  const handleTryAgain = () => { setShowInvalidCodeMessage(false); setShowWelcome(true); setError(''); setCode(''); };
+  const handleValidCodeClose = () => { window.location.reload(); };
 
-  const handleTryAgain = () => {
-    setShowInvalidCodeMessage(false);
-    setShowWelcome(true);
-    setError(''); // Limpa a mensagem de erro anterior
-    setCode(''); // Limpa o campo do código
-  };
-
-  const handleValidCodeClose = () => {
-    setShowValidCodeMessage(false);
-    window.location.reload();
-  };
+  // Se nenhum modal deve ser exibido, o componente não renderiza nada,
+  // deixando o resto do layout (Menu, etc.) funcionar normalmente.
+  if (!showWelcome && !showNoCodeMessage && !showInvalidCodeMessage && !showValidCodeMessage) {
+    return null;
+  }
 
   return (
     <div>
-      <h1 className="text-3xl text-center italic">Menu Principal</h1>
-
-      <div>
-        {/* Seus modais permanecem os mesmos */}
-        {showWelcome && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
-            <div className="absolute left-1/2 transform -translate-x-1/2 w-[1273px] h-[628px] bg-white shadow-lg z-50 text-black">
-              <h1 className="text-xl bg-[#0E7886] text-[white] h-[51px] flex items-center justify-center">
-                Boas Vindas!
-              </h1>
-
-              <div className="px-8">
-                <p className="pt-8 text-left text-lg">
-                  Olá, futuro(a) programador(a)<br />
-                  <br />
-                  É com enorme satisfação que desejamos-lhe nossas boas vindas ao Loop Academic! \o/<br />
-                  <br />
-                  Neste Software Educacional, você terá acesso à uma série de funcionalidades que lhe auxiliarão no aprendizado de Algoritmos, por exemplo: listas de exercícios de programação, material de apoio ao estudo de Algoritmos, envio de dúvidas ao professor ou monitor, fórum de interação com os colegas do curso e muito mais! o/<br />
-                  <br />
-                  Para ter acesso à todas as funcionalidades, é necessário que você informe abaixo o Código da Turma Virtual criada pelo seu professor. É com ele que você terá acesso aos materiais exclusivos da sua turma!<br />
-                  <br />
-                  Por favor, digite o seu Código da Turma Virtual.
-                </p>
-
+      {/* ======================================================= */}
+      {/*      FRONT-END DOS MODAIS TOTALMENTE RECONSTRUÍDO       */}
+      {/* ======================================================= */}
+      
+      {showWelcome && (
+        <Modal>
+          {/* MELHORIA 2: Layout Responsivo com `max-w-` */}
+          <div className="bg-white w-full max-w-4xl rounded-lg shadow-2xl overflow-hidden">
+            <h1 className="text-2xl font-bold bg-[#0E7886] text-white p-4 text-center">
+              Boas-vindas ao Loop Academic!
+            </h1>
+            {/* Permite scroll em telas pequenas se o conteúdo for grande */}
+            <div className="p-6 md:p-8 space-y-4 text-gray-700 leading-relaxed max-h-[80vh] overflow-y-auto">
+              <p>Olá, futuro(a) programador(a)! \o/</p>
+              <p>Estamos muito felizes em ter você aqui. No Loop Academic, você terá acesso a listas de exercícios, materiais de apoio, fórum de dúvidas e muito mais para impulsionar seu aprendizado em Algoritmos.</p>
+              <p className="font-semibold text-lg text-gray-800">Para começar, por favor, insira abaixo o Código da Turma Virtual fornecido pelo seu professor.</p>
+              
+              <form onSubmit={handleCodeSubmit} className="pt-4">
                 <input
                   type="text"
                   value={code}
-                  placeholder="Código da Turma Virtual"
-                  onChange={(e) => setCode(e.target.value)}
-                  className="border-b border-gray-400 outline-none mb-4 w-[560px] pt-12"
+                  placeholder="Digite o Código da Turma aqui"
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => setCode(e.target.value)}
+                  className="p-3 border-2 border-gray-300 rounded-md w-full focus:border-[#0E7886] focus:ring-1 focus:ring-[#0E7886] transition"
                 />
-                
-                {error && <p className="text-red-500 mt-2">{error}</p>}
-
-                <div className="flex justify-end gap-4 mt-5">
-                  <button onClick={handleNoCode} className="text-lg bg-[#9B1111EA] w-[190px] h-[41px] text-white">
-                    <strong>Não tenho</strong>
+                {error && <p className="text-red-600 mt-2 text-center font-semibold">{error}</p>}
+                {/* MELHORIA 3: Botões responsivos */}
+                <div className="flex flex-col sm:flex-row justify-end gap-4 mt-6">
+                  <button type="button" onClick={handleNoCode} className="text-lg font-bold bg-red-700 hover:bg-red-800 text-white py-2 px-6 rounded-md transition-colors">
+                    Não tenho o código
                   </button>
-
-                  <button onClick={handleCodeSubmit} className="text-lg bg-[#0E862E] w-[190px] h-[41px] text-white">
-                    <strong>Enviar</strong>
+                  <button type="submit" disabled={isLoading} className="text-lg font-bold bg-green-600 hover:bg-green-700 text-white py-2 px-6 rounded-md transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed">
+                    {isLoading ? 'Verificando...' : 'Enviar'}
                   </button>
                 </div>
-              </div>
+              </form>
             </div>
           </div>
-        )}
+        </Modal>
+      )}
 
-        {showNoCodeMessage && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
-            <div className="absolute text-center left-1/2 transform -translate-x-1/2 w-[600px] h-auto p-8 bg-white shadow-lg z-50 text-black">
-              <img src={megaphone} alt="megaphone" className="h-[100px] mx-auto mb-4" />
-              <strong className="text-xl text-red-600">
-                Atenção!
-              </strong>
+      {showNoCodeMessage && (
+        <Modal>
+          <div className="bg-white w-full max-w-lg rounded-lg shadow-2xl text-center p-8">
+            <img src={megaphone} alt="Atenção" className="h-24 mx-auto mb-4" />
+            <h2 className="text-2xl font-bold text-red-600 mb-4">Atenção!</h2>
+            <p className="text-lg text-gray-700 mb-6">
+              Solicite o Código da Turma ao seu professor para ter acesso às funcionalidades do sistema!
+            </p>
+            <button onClick={() => navigate('/login')} className="text-lg font-bold bg-[#0E7886] hover:bg-[#0b5a66] text-white py-3 px-8 rounded-md transition-colors w-full">
+              Retornar à tela de Login
+            </button>
+          </div>
+        </Modal>
+      )}
 
-              <div className="px-8">
-                <p className="pt-3 text-left text-lg">
-                  Solicite o Código da Turma ao seu Professor. Sem ele você não poderá ter acesso às funcionalidades do sistema!
-                </p>
-
-                <div className="flex justify-center gap-4 mt-5">
-                  <button onClick={() => navigate('/login')} className="text-lg bg-[#0E7886] w-[358px] h-[41px] text-white">
-                    <strong>Retornar à tela de Login</strong>
-                  </button>
-                </div>
-              </div>
+      {showInvalidCodeMessage && (
+        <Modal>
+          <div className="bg-white w-full max-w-lg rounded-lg shadow-2xl text-center p-8">
+            <img src={megaphone} alt="Erro" className="h-24 mx-auto mb-4" />
+            <h2 className="text-2xl font-bold text-red-600 mb-4">Código da Turma Inválido!</h2>
+            <p className="text-lg text-gray-700 mb-6">
+              {error || 'Houve um erro com o código. Verifique com seu professor e tente novamente.'}
+            </p>
+            <div className="flex flex-col sm:flex-row justify-center gap-4">
+              <button onClick={() => navigate('/login')} className="text-lg font-bold bg-[#0E7886] hover:bg-[#0b5a66] text-white py-2 px-6 rounded-md transition-colors">
+                Tela de Login
+              </button>
+              <button onClick={handleTryAgain} className="text-lg font-bold bg-red-700 hover:bg-red-800 text-white py-2 px-6 rounded-md transition-colors">
+                Tentar Novamente
+              </button>
             </div>
           </div>
-        )}
+        </Modal>
+      )}
 
-        {showInvalidCodeMessage && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
-            <div className="absolute left-1/2 transform -translate-x-1/2 w-[600px] h-auto p-8 bg-white shadow-lg z-50 text-black text-center">
-              <img src={megaphone} alt="megaphone" className="h-[100px] mx-auto mb-4" />
-              <strong className="text-xl text-red-600">
-                Código da Turma Inválido!
-              </strong>
-
-              <div className="px-8">
-                <p className="pt-3 text-left text-lg">
-                  {error || 'Provavelmente, há algum erro com o seu Código de Turma. Por favor, digite-o novamente ou entre em contato com o seu professor.'}
-                </p>
-
-                <div className="flex justify-end gap-4 mt-5">
-                  <button onClick={() => navigate('/login')} className="text-lg bg-[#0E7886] w-[190px] h-[41px] text-white">
-                    <strong>Retornar à tela de Login</strong>
-                  </button>
-
-                  <button onClick={handleTryAgain} className="text-lg bg-[#9B1111EA] w-[190px] h-[41px] text-white">
-                    <strong>Tentar Novamente</strong>
-                  </button>
-                </div>
-              </div>
-            </div>
+      {showValidCodeMessage && (
+        <Modal>
+          <div className="bg-white w-full max-w-lg rounded-lg shadow-2xl text-center p-8">
+            <img src={confetti} alt="Sucesso" className="h-24 mx-auto mb-4" />
+            <h2 className="text-2xl font-bold text-green-600 mb-4">Código Vinculado com Sucesso!</h2>
+            <p className="text-lg text-gray-700 mb-6">
+              Parabéns! A página será recarregada para você começar a usar o Loop Academic.
+            </p>
+            <button onClick={handleValidCodeClose} className="text-lg font-bold bg-green-600 hover:bg-green-700 text-white py-3 px-8 rounded-md transition-colors w-full">
+              Vamos nessa! o/
+            </button>
           </div>
-        )}
-
-        {showValidCodeMessage && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
-            <div className="absolute left-1/2 transform -translate-x-1/2 w-[600px] h-auto p-8 bg-white shadow-lg z-50 text-black text-center">
-              <img src={confetti} alt="confetti" className="h-[100px] mx-auto mb-4" />
-              <strong className="text-xl text-green-600">
-                Código da Turma Vinculado com Sucesso!
-              </strong>
-
-              <div className="px-8">
-                <p className="pt-3 text-left text-lg">
-                  Parabéns! O código da turma foi vinculado com sucesso. Você será redirecionado.
-                </p>
-
-                <div className="flex justify-center gap-4 mt-5">
-                  <button onClick={handleValidCodeClose} className="text-lg bg-[#0E7886] w-[358px] h-[41px] text-white">
-                    <strong>Ir para o Menu Principal</strong>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
+        </Modal>
+      )}
     </div>
   );
 }

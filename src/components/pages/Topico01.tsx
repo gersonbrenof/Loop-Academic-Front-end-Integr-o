@@ -292,7 +292,7 @@ export function Topico01() {
           <div key={item.id} className='mt-4 bg-white border-2 border-[#707070] shadow-lg flex min-h-[180px] rounded-lg'>
             <div className='w-1/4 bg-gray-100 text-gray-800 p-3 border-r-2 border-[#707070] flex flex-col items-center text-center rounded-l-md'>
               {/* ESTA LINHA PEGA A IMAGEM DO USUÁRIO QUE RESPONDEU */}
-             <img src={getImageUrl(item.foto_perfil)} alt={`Foto de ${item.aluno.nomeAluno}`} className='bg-white w-24 h-24 mt-2 rounded-full shadow-lg object-cover border-2 border-gray-300'/>
+             <img src={getImageUrl(item.aluno.foto_perfil)} alt={`Foto de ${item.aluno.nomeAluno}`} className='bg-white w-24 h-24 mt-2 rounded-full shadow-lg object-cover border-2 border-gray-300'/>
               <h1 className='text-xl font-bold mt-3 break-words'>{item.aluno.nomeAluno}</h1>
               <p className='text-sm font-light'>{item.aluno.matricula}</p>
             </div>

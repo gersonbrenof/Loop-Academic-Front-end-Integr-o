@@ -93,7 +93,7 @@ export function MaterialDeApoio02() {
     const token = localStorage.getItem('token');
     if (!token) { navigate('/login'); return; }
     try {
-      const response = await fetch(`${apiUrl}/material-apoio/buscar-material-apoio/?search=${encodeURIComponent(searchQuery)}`, {
+      const response = await fetch(`${apiUrl}/material-apoio/material-apoio/busca-conteudo/?titulo=${encodeURIComponent(searchQuery)}`, {
         headers: { 'Authorization': `Bearer ${token}` },
       });
       if (!response.ok) throw new Error('Falha na busca.');
