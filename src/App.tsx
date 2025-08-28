@@ -1,8 +1,9 @@
-// App.tsx - CÓDIGO FINAL COM A SOLUÇÃO APLICADA
+// App.tsx - CÓDIGO AJUSTADO PARA FUNCIONAR APÓS O BUILD
 
-// 1. ADICIONE 'useEffect' AQUI
+// 1. ADICIONE 'useEffect' E MUDE 'BrowserRouter' PARA 'HashRouter'
 import React, { useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
+// MUDANÇA AQUI: Trocado BrowserRouter por HashRouter
 import { HashRouter as Router, Routes, Route } from 'react-router-dom';
 
 import { Header } from './components/layout/Header';
@@ -19,8 +20,8 @@ import { Usuario } from './components/pages/Usuario';
 import './index.css';
 
 const App = () => {
-  // 2. ADICIONE ESTE BLOCO DE CÓDIGO AQUI
-  // Este é o "vigia" que conserta os links <a> para funcionarem com o HashRouter
+  // 2. ADICIONE O MESMO BLOCO 'useEffect' DO PRIMEIRO CÓDIGO
+  // Este "vigia" garante que todos os links <a> internos funcionem com o HashRouter.
   useEffect(() => {
     const handleLinkClick = (event: MouseEvent) => {
       const link = (event.target as HTMLElement).closest('a');
@@ -50,7 +51,7 @@ const App = () => {
   }, []); // O array vazio [] faz com que este código rode apenas uma vez
 
   return (
-    // Seu código de Router e Routes continua EXATAMENTE o mesmo
+    // Seu código de Routes continua EXATAMENTE o mesmo
     <Router>
       <React.StrictMode>
         <Routes>
@@ -58,10 +59,9 @@ const App = () => {
           <Route path='/usuario' element={<Usuario />} />
           <Route path='/cadastrodealuno' element={<CadastroDeAluno />} />
           <Route path='/exercicio' element={<Exercicio />} />
-          <Route path='/material' element={<Material />} />
+          <Route path='/material/:materialId/:tipo/:conteudoId' element={<Material />} />
           
           <Route path="/exercicio/responder/:exercicioId" element={<Exercicio />} />
-
 
           <Route 
             path='/' 
