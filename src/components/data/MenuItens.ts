@@ -21,7 +21,7 @@ const menuItems = [
     },
     {
       link: '/Forum',
-      imgSrc: '/img/forum.png',
+      imgSrc: '../../../public/img/Forum.png',
       title: 'Fórum',
     },
     {
