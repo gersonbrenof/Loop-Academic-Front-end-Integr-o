@@ -63,9 +63,7 @@ export function MaterialDeApoio() {
     }
   }, [searchQuery]);
 
-  // =======================================================
-  //         LÓGICA DE BUSCA CORRIGIDA
-  // =======================================================
+
   const handleSearch = async () => {
     // Se a busca estiver vazia, limpa os resultados e não faz nada
     if (searchQuery.trim() === '') {
@@ -80,10 +78,7 @@ export function MaterialDeApoio() {
     const token = localStorage.getItem('token');
     if (!token) { navigate('/login'); return; }
     
-    // ================================================================
-    // AQUI ESTÁ A ÚNICA CORREÇÃO: troquei `?search=` por `?titulo=`
-    // O resto do código permanece o mesmo.
-    // ================================================================
+   
     const urlBusca = `${apiUrl}/material-apoio/buscar-material-apoio/?titulo=${encodeURIComponent(searchQuery)}`;
     
     try {
@@ -108,9 +103,7 @@ export function MaterialDeApoio() {
   if (loading) return <div>Carregando...</div>;
   if (error) return <div>Erro: {error}</div>;
 
-  // =======================================================
-  //      SEU FRONT-END (JSX) PERMANECE 100% INTOCADO
-  // =======================================================
+
   return (
     <div className='mt-0 absolute top-[-10px] left-[-550px]'>
       <h1 className='text-center text-3xl italic font-bold ml-[190px]'>MATERIAL DE APOIO</h1>

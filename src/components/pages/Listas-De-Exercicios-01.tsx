@@ -34,7 +34,7 @@ export function ListasDeExercicios01() {
       setError(null);
       try {
         const token = localStorage.getItem('token');
-        const response = await axios.get<ListaDetalhes>(`${apiUrl}/exercicio/status-da-lista-exercicio/${id}`, {
+        const response = await axios.get<ListaDetalhes>(`${apiUrl}/exercicio/status-da-lista-exercicio/${id}/`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setLista(response.data);

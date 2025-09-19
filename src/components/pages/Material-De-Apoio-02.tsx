@@ -25,7 +25,14 @@ interface ConteudoUnificado {
   displayTipo: 'Vídeo' | 'PDF' | 'Mapa Mental';
   imageUrl: string; 
 }
-interface SearchResultItem { id: number; titulo: string; tipo: 'video' | 'pdf' | 'mapa-mental'; }
+// <<< ALTERAÇÃO 1: INTERFACE DA BUSCA ATUALIZADA >>>
+// Agora esperamos o `material_id` e aceitamos os tipos que a API pode retornar.
+interface SearchResultItem { 
+  id: number; 
+  titulo: string; 
+  tipo: string; // Usamos string genérico para aceitar 'video_youtube', etc.
+  material_id: number; // Essencial para evitar o link com 'undefined'
+}
 
 const apiUrl = import.meta.env.VITE_API_URL;
 
@@ -49,7 +56,7 @@ export function MaterialDeApoio02() {
   const [searchResults, setSearchResults] = useState<SearchResultItem[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   
-  // --- LÓGICA DE FETCH COMPLETA ---
+  // --- LÓGICA DE FETCH (sem alterações) ---
   useEffect(() => {
     const fetchMaterialDetail = async () => {
       if (!materialId) return;
@@ -83,7 +90,7 @@ export function MaterialDeApoio02() {
     fetchMaterialDetail();
   }, [materialId, navigate]);
 
-  // --- LÓGICA DE BUSCA COMPLETA ---
+  // <<< ALTERAÇÃO 2: LÓGICA DE BUSCA COM TRADUÇÃO DO 'TIPO' >>>
   const handleSearch = async () => {
     if (searchQuery.trim() === '') {
       setSearchResults([]);
@@ -107,7 +114,22 @@ export function MaterialDeApoio02() {
     }
   };
 
-  // --- LÓGICA useMemo COMPLETA COM A ALTERAÇÃO PARA O ÍCONE ---
+  // Função auxiliar para "traduzir" o tipo vindo da API para o tipo da URL
+  const getNormalizedTipo = (tipoFromApi: string): string => {
+    if (tipoFromApi === 'video_youtube') {
+      return 'video';
+    }
+    if (tipoFromApi === 'mapa_mental') {
+      return 'mapa-mental';
+    }
+    // Adicione outras traduções se necessário
+    // if (tipoFromApi === 'arquivo_pdf') {
+    //   return 'pdf';
+    // }
+    return tipoFromApi; // Retorna o original se não precisar de tradução
+  };
+
+  // --- LÓGICA useMemo (sem alterações) ---
   const combinedContent: ConteudoUnificado[] = useMemo(() => {
     if (!material) return [];
     const videos = material.videos_youtube.map(video => ({
@@ -120,7 +142,7 @@ export function MaterialDeApoio02() {
       id: `pdf-${pdf.id}`, numericId: pdf.id, titulo: pdf.titulo,
       descricao: pdf.descricao, link: pdf.arquivo,
       tipo: 'pdf' as const, displayTipo: 'PDF' as const,
-      imageUrl: '/public/img/img-arquivo.png', // Identificador para renderizar o ícone
+      imageUrl: '/public/img/img-arquivo.png', 
     }));
     const mapasMentais = (material.mapas_mentais || []).map(mapa => ({
         id: `mapa-${mapa.id}`, numericId: mapa.id, titulo: mapa.titulo,
@@ -167,19 +189,27 @@ export function MaterialDeApoio02() {
             </div>
             {searchResults.length > 0 && (
               <div className="absolute top-full left-0 w-full bg-white border-x-2 border-b-2 border-gray-300 shadow-lg mt-1 z-10 max-h-80 overflow-y-auto">
-                {searchResults.map((result) => (
-                  <Link
-                    key={`${result.tipo}-${result.id}`}
-                    to={`/material/${materialId}/${result.tipo}/${result.id}`}
-                    className="flex items-center gap-4 p-3 hover:bg-gray-100 border-b last:border-b-0"
-                    onClick={() => { setSearchQuery(''); setSearchResults([]); }}
-                  >
-                    {result.tipo === 'video' && <FaYoutube className="text-red-500 w-6 h-6 flex-shrink-0" />}
-                    {result.tipo === 'pdf' && <FaFilePdf className="text-green-600 w-6 h-6 flex-shrink-0" />}
-                    {result.tipo === 'mapa-mental' && <FaBrain className="text-purple-600 w-6 h-6 flex-shrink-0" />}
-                    <span className="text-black">{result.titulo}</span>
-                  </Link>
-                ))}
+                {searchResults.map((result) => {
+                  // <<< ALTERAÇÃO 3: CORREÇÃO APLICADA AQUI, ANTES DE RENDERIZAR >>>
+                  // Usamos a função para pegar o tipo correto para a URL
+                  const tipoCorretoParaUrl = getNormalizedTipo(result.tipo);
+                  
+                  return (
+                    <Link
+                      key={`${result.tipo}-${result.id}`}
+                      // O link agora usa o `material_id` do resultado e o tipo já corrigido
+                      to={`/material/${materialId}/${tipoCorretoParaUrl}/${result.id}`}
+                      className="flex items-center gap-4 p-3 hover:bg-gray-100 border-b last:border-b-0"
+                      onClick={() => { setSearchQuery(''); setSearchResults([]); }}
+                    >
+                      {/* A lógica de ícones continua a mesma */}
+                      {tipoCorretoParaUrl === 'video' && <FaYoutube className="text-red-500 w-6 h-6 flex-shrink-0" />}
+                      {tipoCorretoParaUrl === 'pdf' && <FaFilePdf className="text-green-600 w-6 h-6 flex-shrink-0" />}
+                      {tipoCorretoParaUrl === 'mapa-mental' && <FaBrain className="text-purple-600 w-6 h-6 flex-shrink-0" />}
+                      <span className="text-black">{result.titulo}</span>
+                    </Link>
+                  );
+                })}
               </div>
             )}
              {isSearching && searchResults.length === 0 && (
@@ -188,6 +218,7 @@ export function MaterialDeApoio02() {
                  </div>
             )}
           </div>
+          {/* O resto do seu componente continua igual */}
           <div className='w-[920px] h-auto bg-white mt-5 p-5 ml-8 flex flex-col items-center border-2 border-[#707070] shadow-lg'>
             <div className='w-[880px] h-[90px] bg-white items-center border-2 border-[#707070]'>
               <div className='h-3 w-full bg-[#0E7886]'></div>
@@ -204,7 +235,6 @@ export function MaterialDeApoio02() {
                     'bg-purple-600'
                 }`}></div>
                 <div className='flex flex-grow'>
-                  {/* --- RENDERIZAÇÃO CONDICIONAL PARA O ÍCONE DE LIVRO --- */}
                   <div className='w-1/3 bg-gray-100 flex items-center justify-center'>
                     {item.imageUrl === 'use-book-icon' ? (
                       <FaBookOpen className='w-32 h-32 text-gray-400' />
